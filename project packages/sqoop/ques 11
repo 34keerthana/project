@@ -1,0 +1,7 @@
+sqoop export --connect jdbc:mysql://localhost/question11 --username root --password 'root' --table question11 --update-mode allowinsert  --export-dir /Pig/Question10/p* --input-fields-terminated-by '\t"' ;
+echo -e '\n\nContents Exported to MySQL Database:\n\n'
+
+mysql -u root -p'root' -e '
+
+use question11;
+select * from question11.question11;

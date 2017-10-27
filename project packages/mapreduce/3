@@ -1,0 +1,86 @@
+import java.io.*;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.*;
+
+public class First
+{
+public static class Map extends Mapper<LongWritable,Text,Text,IntWritable>
+{
+	public void map(LongWritable key,Text value,Context context) throws IOException,InterruptedException
+	{
+	String row=value.toString();
+	String[] tokens=row.split("\t");
+	String casestatus=tokens[1];
+	String socname=tokens[3];
+	String jobtitle=tokens[4];
+	if(casestatus.contains("CERTIFIED"))
+	{
+		if(jobtitle.contains("DATA SCIENTIST"))	
+			{
+			context.write(new Text(socname),new IntWritable(1));
+			}
+
+		
+			}
+		
+	}
+}
+public static class Reduce extends Reducer<Text,IntWritable,Text,IntWritable>
+{
+	int max=0;
+	String socName="nothing";
+	public void reduce(Text inpk,Iterable<IntWritable> inpv,Context c) throws IOException,InterruptedException
+	{
+		int count=0;
+		IntWritable result=new IntWritable();
+		for(IntWritable inp:inpv)
+		{
+			count+=inp.get();
+			
+		}
+	result.set(count);
+	if(inpk!=new Text(""))
+		if(count>max)
+		{
+			max=count;
+			socName=inpk.toString();
+			
+		}
+	//context.write(key,new LongWritable(sum));
+	
+	}
+	protected void cleanup(Context context) throws IOException,InterruptedException
+	{
+		if(socName!="")
+			context.write(new Text(socName), new IntWritable(max));
+	}
+}
+public static void main(String[] args) throws IOException,ClassNotFoundException,InterruptedException
+{
+    Configuration conf = new Configuration();
+    conf.set("mapreduce.output.textoutputformat.separator",",");
+    
+    Job job = Job.getInstance(conf);
+    job.setJarByClass(First.class);
+    job.setJobName("First");
+    
+    job.setMapperClass(Map.class);
+    job.setReducerClass(Reduce.class);
+    job.setNumReduceTasks(1);
+    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputValueClass(IntWritable.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+    FileInputFormat.addInputPath(job, new Path(args[0]));
+    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
+}
